@@ -1261,8 +1261,8 @@ namespace AddressLibraryManager
             Manager.CurrentDatabase.Names = all;
             this.MarkModified(2);
         }
-
-        private void button11_Click(object sender, EventArgs e)
+        
+        private void WriteIDANames(bool ida7)
         {
             if (Manager.CurrentDatabase == null)
             {
@@ -1276,7 +1276,7 @@ namespace AddressLibraryManager
                 return;
             }
 
-            if(Manager.CurrentDatabase.Versions == null || Manager.CurrentDatabase.Versions.Count == 0)
+            if (Manager.CurrentDatabase.Versions == null || Manager.CurrentDatabase.Versions.Count == 0)
             {
                 MessageBox.Show("There are no versions defined, unable to calculate offsets!");
                 return;
@@ -1287,7 +1287,7 @@ namespace AddressLibraryManager
                 return;
 
             Library lib;
-            if(!Manager.CurrentDatabase.Versions.TryGetValue(ver.Value, out lib))
+            if (!Manager.CurrentDatabase.Versions.TryGetValue(ver.Value, out lib))
             {
                 MessageBox.Show("Something went wrong.");
                 return;
@@ -1304,7 +1304,7 @@ namespace AddressLibraryManager
                 return;
 
             Dictionary<long, string> already = null;
-            if(onlyChanged == DialogResult.Yes)
+            if (onlyChanged == DialogResult.Yes)
             {
                 already = new Dictionary<long, string>();
 
@@ -1323,7 +1323,7 @@ namespace AddressLibraryManager
                     using (var swp = new System.IO.StreamReader(of.FileName))
                     {
                         string l;
-                        while((l = swp.ReadLine()) != null)
+                        while ((l = swp.ReadLine()) != null)
                         {
                             if (l.Length == 0)
                                 continue;
@@ -1344,7 +1344,7 @@ namespace AddressLibraryManager
                         }
                     }
                 }
-                catch(Exception ex)
+                catch (Exception ex)
                 {
                     ReportError(ex);
                 }
@@ -1359,25 +1359,28 @@ namespace AddressLibraryManager
                 using (var sw = new System.IO.StreamWriter(fi.FullName, false, new UTF8Encoding(false)))
                 {
                     sw.WriteLine("def NameAddr(ea, name):");
-                    sw.WriteLine("    idc.MakeName(ea, name)");
+                    if (!ida7)
+                        sw.WriteLine("    idc.MakeName(ea, name)");
+                    else
+                        sw.WriteLine("    idc.set_name(ea, name, SN_CHECK)");
                     sw.WriteLine();
                     sw.WriteLine("print \"Importing names...\"");
                     sw.WriteLine();
-                    foreach(var pair in Manager.CurrentDatabase.Names)
+                    foreach (var pair in Manager.CurrentDatabase.Names)
                     {
                         string n = (pair.Value ?? "");
                         if (n.Length == 0)
                             continue;
 
                         uint offset;
-                        if(!lib.Values.TryGetValue(pair.Key, out offset))
+                        if (!lib.Values.TryGetValue(pair.Key, out offset))
                         {
                             missingId++;
                             continue;
                         }
 
                         long addr = lib.BaseAddress + offset;
-                        if(already != null)
+                        if (already != null)
                         {
                             string prev;
                             if (already.TryGetValue(addr, out prev) && prev == n)
@@ -1404,10 +1407,20 @@ namespace AddressLibraryManager
                     stats += " Failed to write " + missingId + " because the IDs were not found.";
                 MessageBox.Show(stats + Environment.NewLine + "Wrote file " + fi.Name + " to " + fi.DirectoryName + "!" + Environment.NewLine + "Run this as a script file in IDA.");
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
                 ReportError(ex);
             }
+        }
+
+        private void button11_Click(object sender, EventArgs e)
+        {
+            this.WriteIDANames(false);
+        }
+
+        private void button12_Click(object sender, EventArgs e)
+        {
+            this.WriteIDANames(true);
         }
     }
 }
