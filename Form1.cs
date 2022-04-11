@@ -1125,6 +1125,39 @@ namespace AddressLibraryManager
             this.MarkModified(1);
         }
 
+        internal const char AddressPlaceholderSymbol = '*';
+        internal const string AddressPlaceholderString = "*";
+
+        private static string PreProcessNameFromIDA(string n, long addr)
+        {
+            if (string.IsNullOrEmpty(n))
+                return n;
+
+            string hex = addr.ToString("X");
+            if (n.Length > hex.Length && n.EndsWith(hex, StringComparison.OrdinalIgnoreCase))
+            {
+                n = n.Substring(0, n.Length - hex.Length);
+                n = n + AddressPlaceholderString;
+            }
+
+            return n;
+        }
+
+        private static string PreProcessNameToIDA(string n, long addr)
+        {
+            if (string.IsNullOrEmpty(n))
+                return n;
+
+            int ix;
+            while((ix = n.IndexOf('*')) >= 0)
+            {
+                n = n.Remove(ix, 1);
+                n = n.Insert(ix, addr.ToString("X"));
+            }
+
+            return n;
+        }
+
         private void button8_Click(object sender, EventArgs e)
         {
             if(Manager.CurrentDatabase == null)
@@ -1208,6 +1241,8 @@ namespace AddressLibraryManager
 
                         string n = spl[1];
                         //if (!string.IsNullOrEmpty(spl[2])) n = spl[2];
+                        n = PreProcessNameFromIDA(n, addr);
+
                         string prev;
                         if(!map.TryGetValue(id, out prev) || prev != n)
                         {
@@ -1338,6 +1373,7 @@ namespace AddressLibraryManager
 
                             string n = spl[1];
                             //if (!string.IsNullOrEmpty(spl[2])) n = spl[2];
+                            n = PreProcessNameFromIDA(n, addr);
 
                             if (!string.IsNullOrEmpty(n))
                                 already[addr] = n;
@@ -1364,7 +1400,7 @@ namespace AddressLibraryManager
                     else
                         sw.WriteLine("    idc.set_name(ea, name, SN_CHECK)");
                     sw.WriteLine();
-                    sw.WriteLine("print \"Importing names...\"");
+                    sw.WriteLine("print (\"Importing names...\")");
                     sw.WriteLine();
                     foreach (var pair in Manager.CurrentDatabase.Names)
                     {
@@ -1387,6 +1423,8 @@ namespace AddressLibraryManager
                                 continue;
                         }
 
+                        n = PreProcessNameToIDA(n, addr);
+
                         n = n.Replace("\"", "\\\"");
 
                         sw.Write("NameAddr(0x");
@@ -1399,7 +1437,7 @@ namespace AddressLibraryManager
                     }
 
                     sw.WriteLine();
-                    sw.WriteLine("print \"Done with name import\"");
+                    sw.WriteLine("print (\"Done with name import\")");
                 }
 
                 string stats = "Wrote " + writeId + " renames.";
