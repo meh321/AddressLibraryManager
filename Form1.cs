@@ -1176,10 +1176,10 @@ namespace AddressLibraryManager
 
             var version = AskVersion(Manager.CurrentDatabase.Versions.Keys, "Select the version of the IDA database");
 
-			if (!version.HasValue)
-			{
-				return;
-			}
+            if (!version.HasValue)
+            {
+                return;
+            }
 
             Library library;
 
@@ -1190,29 +1190,29 @@ namespace AddressLibraryManager
                 return;
             }
 
-			var existingAddresses = GetExistingAddresses();
+            var existingAddresses = GetExistingAddresses();
 
             var openFileDialogue = new OpenFileDialog();
-			openFileDialogue.AddExtension = true;
-			openFileDialogue.DefaultExt = "txt";
-			openFileDialogue.CheckFileExists = true;
-			openFileDialogue.Title = "Select idanames.txt";
+            openFileDialogue.AddExtension = true;
+            openFileDialogue.DefaultExt = "txt";
+            openFileDialogue.CheckFileExists = true;
+            openFileDialogue.Title = "Select idanames.txt";
 
             var openFileDialogueResult = openFileDialogue.ShowDialog();
 
-			if (openFileDialogueResult != DialogResult.OK)
-			{
-				return;
-			}
+            if (openFileDialogueResult != DialogResult.OK)
+            {
+                return;
+            }
 
             try
             {
                 var idNameDictionary = Manager.CurrentDatabase.Names;
 
-				if (idNameDictionary == null)
-				{
-					idNameDictionary = new SortedDictionary<ulong, string>();
-				}
+                if (idNameDictionary == null)
+                {
+                    idNameDictionary = new SortedDictionary<ulong, string>();
+                }
 
                 int missingId = 0;
                 int changedId = 0;
@@ -1221,10 +1221,10 @@ namespace AddressLibraryManager
 
                 if (library.Values != null)
                 {
-					foreach (var idOffsetPair in library.Values)
-					{
-						offsetIdDictionary[idOffsetPair.Value] = idOffsetPair.Key;
-					}
+                    foreach (var idOffsetPair in library.Values)
+                    {
+                        offsetIdDictionary[idOffsetPair.Value] = idOffsetPair.Key;
+                    }
                 }
 
                 var fileInfo = new System.IO.FileInfo(openFileDialogue.FileName);
@@ -1236,36 +1236,36 @@ namespace AddressLibraryManager
 
                     while ((line = streamReader.ReadLine()) != null)
                     {
-						lineNumber++;
+                        lineNumber++;
 
-						if (line.Length == 0)
-						{
-							continue;
-						}
+                        if (line.Length == 0)
+                        {
+                            continue;
+                        }
 
                         var splitLine = line.Split(new[] { '\t' }, StringSplitOptions.None);
 
-						if (splitLine.Length != 3)
-						{
-							throw new FormatException("Invalid format on line " + lineNumber + ": " + line);
-						}
+                        if (splitLine.Length != 3)
+                        {
+                            throw new FormatException("Invalid format on line " + lineNumber + ": " + line);
+                        }
 
                         long address;
 
-						if (!long.TryParse(splitLine[0], System.Globalization.NumberStyles.AllowHexSpecifier, null, out address))
-						{
-							throw new FormatException("Invalid format on line " + lineNumber + ": " + line);
-						}
+                        if (!long.TryParse(splitLine[0], System.Globalization.NumberStyles.AllowHexSpecifier, null, out address))
+                        {
+                            throw new FormatException("Invalid format on line " + lineNumber + ": " + line);
+                        }
 
                         long offset = address - library.BaseAddress;
 
-						if (offset < 0 || offset > 0x40000000)
-						{
-							throw new FormatException("Address out of bounds on line " + lineNumber + ": " + address);
-						}
+                        if (offset < 0 || offset > 0x40000000)
+                        {
+                            throw new FormatException("Address out of bounds on line " + lineNumber + ": " + address);
+                        }
 
                         ulong id;
-						offsetIdDictionary.TryGetValue((uint)offset, out id);
+                        offsetIdDictionary.TryGetValue((uint)offset, out id);
 
                         if (id == 0)
                         {
@@ -1275,45 +1275,45 @@ namespace AddressLibraryManager
                         }
 
                         string name = splitLine[1];
-						//if (!string.IsNullOrEmpty(splitLine[2])) { name = splitLine[2]; }
-						name = PreProcessNameFromIDA(name, address);
+                        //if (!string.IsNullOrEmpty(splitLine[2])) { name = splitLine[2]; }
+                        name = PreProcessNameFromIDA(name, address);
 
-						if (existingAddresses != null)
-						{
-							string existingName;
-
-							if (existingAddresses.TryGetValue(address, out existingName) && existingName == name)
-							{
-								continue;
-							}
-						}
-
-						string previousName;
-
-						if (!idNameDictionary.TryGetValue(id, out previousName) || previousName != name)
+                        if (existingAddresses != null)
                         {
-							idNameDictionary[id] = name;
+                            string existingName;
+
+                            if (existingAddresses.TryGetValue(address, out existingName) && existingName == name)
+                            {
+                                continue;
+                            }
+                        }
+
+                        string previousName;
+
+                        if (!idNameDictionary.TryGetValue(id, out previousName) || previousName != name)
+                        {
+                            idNameDictionary[id] = name;
                             changedId++;
                         }
                     }
                 }
 
-				if (changedId > 0)
-				{
-					this.MarkModified(2);
-				}
+                if (changedId > 0)
+                {
+                    this.MarkModified(2);
+                }
 
-				if (idNameDictionary.Count != 0)
-				{
-					Manager.CurrentDatabase.Names = idNameDictionary;
-				}
+                if (idNameDictionary.Count != 0)
+                {
+                    Manager.CurrentDatabase.Names = idNameDictionary;
+                }
 
                 string missingIdErrorMessage = "";
 
-				if (missingId > 0)
-				{
-					missingIdErrorMessage = " Unable to edit " + missingId + " names because the IDs were missing!";
-				}
+                if (missingId > 0)
+                {
+                    missingIdErrorMessage = " Unable to edit " + missingId + " names because the IDs were missing!";
+                }
 
                 MessageBox.Show("Modified " + changedId + " names." + missingIdErrorMessage);
             }
@@ -1351,80 +1351,80 @@ namespace AddressLibraryManager
             this.MarkModified(2);
         }
 
-		private Dictionary<long, string> GetExistingAddresses()
-		{
-			Dictionary<long, string> existingAddresses = null;
+        private Dictionary<long, string> GetExistingAddresses()
+        {
+            Dictionary<long, string> existingAddresses = null;
 
-			var messageBoxResult = MessageBox.Show(
-				"Do you only want to write names that have changed? If so, you will first need to specify an idanames.txt file to serve as a point of comparison. Only names different to the specified file will be written.",
-				"Question",
-				MessageBoxButtons.YesNo);
+            var messageBoxResult = MessageBox.Show(
+                "Do you only want to write names that have changed? If so, you will first need to specify an idanames.txt file to serve as a point of comparison. Only names different to the specified file will be written.",
+                "Question",
+                MessageBoxButtons.YesNo);
 
-			if (messageBoxResult != DialogResult.Yes)
-			{
-				return existingAddresses;
-			}
+            if (messageBoxResult != DialogResult.Yes)
+            {
+                return existingAddresses;
+            }
 
-			var openFileDialogue = new OpenFileDialog();
-			openFileDialogue.AddExtension = true;
-			openFileDialogue.DefaultExt = "txt";
-			openFileDialogue.CheckFileExists = true;
-			openFileDialogue.Title = "Select base idanames.txt";
+            var openFileDialogue = new OpenFileDialog();
+            openFileDialogue.AddExtension = true;
+            openFileDialogue.DefaultExt = "txt";
+            openFileDialogue.CheckFileExists = true;
+            openFileDialogue.Title = "Select base idanames.txt";
 
-			var openFileDialogueResult = openFileDialogue.ShowDialog();
+            var openFileDialogueResult = openFileDialogue.ShowDialog();
 
-			if (openFileDialogueResult != DialogResult.OK)
-			{
-				return existingAddresses;
-			}
+            if (openFileDialogueResult != DialogResult.OK)
+            {
+                return existingAddresses;
+            }
 
-			existingAddresses = new Dictionary<long, string>();
+            existingAddresses = new Dictionary<long, string>();
 
-			try
-			{
-				using (var streamReader = new System.IO.StreamReader(openFileDialogue.FileName))
-				{
-					string line;
+            try
+            {
+                using (var streamReader = new System.IO.StreamReader(openFileDialogue.FileName))
+                {
+                    string line;
 
-					while ((line = streamReader.ReadLine()) != null)
-					{
-						if (line.Length == 0)
-						{
-							continue;
-						}
+                    while ((line = streamReader.ReadLine()) != null)
+                    {
+                        if (line.Length == 0)
+                        {
+                            continue;
+                        }
 
-						var splitLine = line.Split(new[] { '\t' }, StringSplitOptions.None);
+                        var splitLine = line.Split(new[] { '\t' }, StringSplitOptions.None);
 
-						if (splitLine.Length != 3)
-						{
-							continue;
-						}
+                        if (splitLine.Length != 3)
+                        {
+                            continue;
+                        }
 
-						long address;
+                        long address;
 
-						if (!long.TryParse(splitLine[0], System.Globalization.NumberStyles.AllowHexSpecifier, null, out address))
-						{
-							continue;
-						}
+                        if (!long.TryParse(splitLine[0], System.Globalization.NumberStyles.AllowHexSpecifier, null, out address))
+                        {
+                            continue;
+                        }
 
-						string name = splitLine[1];
-						//if (!string.IsNullOrEmpty(splitLine[2])) { name = splitLine[2]; }
-						name = PreProcessNameFromIDA(name, address);
+                        string name = splitLine[1];
+                        //if (!string.IsNullOrEmpty(splitLine[2])) { name = splitLine[2]; }
+                        name = PreProcessNameFromIDA(name, address);
 
-						if (!string.IsNullOrEmpty(name))
-						{
-							existingAddresses[address] = name;
-						}
-					}
-				}
-			}
-			catch (Exception exception)
-			{
-				ReportError(exception);
-			}
+                        if (!string.IsNullOrEmpty(name))
+                        {
+                            existingAddresses[address] = name;
+                        }
+                    }
+                }
+            }
+            catch (Exception exception)
+            {
+                ReportError(exception);
+            }
 
-			return existingAddresses;
-		}
+            return existingAddresses;
+        }
 
         private void WriteIDANames(bool ida7)
         {
@@ -1451,10 +1451,10 @@ namespace AddressLibraryManager
 
             var version = AskVersion(Manager.CurrentDatabase.Versions.Keys, "Select the version of the IDA database");
 
-			if (!version.HasValue)
-			{
-				return;
-			}
+            if (!version.HasValue)
+            {
+                return;
+            }
 
             Library library;
 
@@ -1472,9 +1472,9 @@ namespace AddressLibraryManager
                 return;
             }
 
-			var existingAddresses = GetExistingAddresses();
+            var existingAddresses = GetExistingAddresses();
 
-			try
+            try
             {
                 int missingId = 0;
                 int writeId = 0;
@@ -1483,29 +1483,29 @@ namespace AddressLibraryManager
 
                 using (var streamWriter = new System.IO.StreamWriter(fileInfo.FullName, false, new UTF8Encoding(false)))
                 {
-					streamWriter.WriteLine("def NameAddr(ea, name):");
+                    streamWriter.WriteLine("def NameAddr(ea, name):");
 
-					if (!ida7)
-					{
-						streamWriter.WriteLine("    idc.MakeName(ea, name)");
-					}
-					else
-					{
-						streamWriter.WriteLine("    idc.set_name(ea, name, SN_CHECK)");
-					}
+                    if (!ida7)
+                    {
+                        streamWriter.WriteLine("    idc.MakeName(ea, name)");
+                    }
+                    else
+                    {
+                        streamWriter.WriteLine("    idc.set_name(ea, name, SN_CHECK)");
+                    }
 
-					streamWriter.WriteLine();
-					streamWriter.WriteLine("print (\"Importing names...\")");
-					streamWriter.WriteLine();
+                    streamWriter.WriteLine();
+                    streamWriter.WriteLine("print (\"Importing names...\")");
+                    streamWriter.WriteLine();
 
                     foreach (var idNamePair in Manager.CurrentDatabase.Names)
                     {
                         string name = (idNamePair.Value ?? "");
 
-						if (name.Length == 0)
-						{
-							continue;
-						}
+                        if (name.Length == 0)
+                        {
+                            continue;
+                        }
 
                         uint offset;
 
@@ -1522,35 +1522,35 @@ namespace AddressLibraryManager
                         {
                             string existingName;
 
-							if (existingAddresses.TryGetValue(address, out existingName) && existingName == name)
-							{
-								continue;
-							}
+                            if (existingAddresses.TryGetValue(address, out existingName) && existingName == name)
+                            {
+                                continue;
+                            }
                         }
 
-						name = PreProcessNameToIDA(name, address);
-						name = name.Replace("\"", "\\\"");
+                        name = PreProcessNameToIDA(name, address);
+                        name = name.Replace("\"", "\\\"");
 
-						streamWriter.Write("NameAddr(0x");
-						streamWriter.Write(address.ToString("X"));
-						streamWriter.Write(", \"");
-						streamWriter.Write(name);
-						streamWriter.Write("\")");
-						streamWriter.WriteLine();
+                        streamWriter.Write("NameAddr(0x");
+                        streamWriter.Write(address.ToString("X"));
+                        streamWriter.Write(", \"");
+                        streamWriter.Write(name);
+                        streamWriter.Write("\")");
+                        streamWriter.WriteLine();
 
                         writeId++;
                     }
 
-					streamWriter.WriteLine();
-					streamWriter.WriteLine("print (\"Done with name import\")");
+                    streamWriter.WriteLine();
+                    streamWriter.WriteLine("print (\"Done with name import\")");
                 }
 
                 string statistics = writeId + " names have been written.";
 
-				if (missingId > 0)
-				{
-					statistics += " Failed to write " + missingId + " names because their IDs were not found.";
-				}
+                if (missingId > 0)
+                {
+                    statistics += " Failed to write " + missingId + " names because their IDs were not found.";
+                }
 
                 MessageBox.Show(statistics + Environment.NewLine + "The file " + fileInfo.Name + " has been written to " + fileInfo.DirectoryName + "!" + Environment.NewLine + "Run this script in IDA to set names.");
             }
