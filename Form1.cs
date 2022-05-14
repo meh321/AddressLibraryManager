@@ -1190,7 +1190,7 @@ namespace AddressLibraryManager
                 return;
             }
 
-            var existingAddresses = GetExistingAddresses();
+            var existingNamesList = GetExistingNames();
 
             var openFileDialogue = new OpenFileDialog();
             openFileDialogue.AddExtension = true;
@@ -1217,7 +1217,7 @@ namespace AddressLibraryManager
                 int missingId = 0;
                 int changedId = 0;
 
-                Dictionary<uint, ulong> offsetIdDictionary = new Dictionary<uint, ulong>();
+                var offsetIdDictionary = new Dictionary<uint, ulong>();
 
                 if (library.Values != null)
                 {
@@ -1278,14 +1278,9 @@ namespace AddressLibraryManager
                         //if (!string.IsNullOrEmpty(splitLine[2])) { name = splitLine[2]; }
                         name = PreProcessNameFromIDA(name, address);
 
-                        if (existingAddresses != null)
+                        if (IsExistingName(existingNamesList, id, name))
                         {
-                            string existingName;
-
-                            if (existingAddresses.TryGetValue(address, out existingName) && existingName == name)
-                            {
-                                continue;
-                            }
+                            continue;
                         }
 
                         string previousName;
@@ -1351,79 +1346,142 @@ namespace AddressLibraryManager
             this.MarkModified(2);
         }
 
-        private Dictionary<long, string> GetExistingAddresses()
+        private List<Dictionary<ulong, string>> GetExistingNames()
         {
-            Dictionary<long, string> existingAddresses = null;
+            List<Dictionary<ulong, string>> existingNamesList = null;
 
             var messageBoxResult = MessageBox.Show(
-                "Do you only want to write names that have changed? If so, you will first need to specify an idanames.txt file to serve as a point of comparison. Only names different to the specified file will be written.",
+                "Do you only want to write names that have changed? If so, names will be compared against the base idanames.txt files provided for each version in the Names subdirectory.",
                 "Question",
                 MessageBoxButtons.YesNo);
 
             if (messageBoxResult != DialogResult.Yes)
             {
-                return existingAddresses;
+                return existingNamesList;
             }
 
-            var openFileDialogue = new OpenFileDialog();
-            openFileDialogue.AddExtension = true;
-            openFileDialogue.DefaultExt = "txt";
-            openFileDialogue.CheckFileExists = true;
-            openFileDialogue.Title = "Select base idanames.txt";
+            existingNamesList = new List<Dictionary<ulong, string>>();
 
-            var openFileDialogueResult = openFileDialogue.ShowDialog();
+            var namesDirectory = System.IO.Path.Combine(System.IO.Directory.GetCurrentDirectory(), "Names");
 
-            if (openFileDialogueResult != DialogResult.OK)
+            if (!System.IO.Directory.Exists(namesDirectory))
             {
-                return existingAddresses;
+                return existingNamesList;
             }
 
-            existingAddresses = new Dictionary<long, string>();
-
-            try
+            foreach (var version in Manager.CurrentDatabase.Versions)
             {
-                using (var streamReader = new System.IO.StreamReader(openFileDialogue.FileName))
+                var versionDirectory = System.IO.Path.Combine(namesDirectory, version.Key.ToString());
+
+                if (!System.IO.Directory.Exists(versionDirectory))
                 {
-                    string line;
+                    continue;
+                }
 
-                    while ((line = streamReader.ReadLine()) != null)
+                var library = version.Value;
+                var offsetIdDictionary = new Dictionary<uint, ulong>();
+
+                if (library.Values != null)
+                {
+                    foreach (var idOffsetPair in library.Values)
                     {
-                        if (line.Length == 0)
+                        offsetIdDictionary[idOffsetPair.Value] = idOffsetPair.Key;
+                    }
+                }
+
+                foreach (var fileName in System.IO.Directory.GetFiles(versionDirectory))
+                {
+                    if (!System.IO.Path.GetExtension(fileName).Equals(".txt", StringComparison.OrdinalIgnoreCase))
+                    {
+                        continue;
+                    }
+
+                    try
+                    {
+                        var existingNames = new Dictionary<ulong, string>();
+
+                        using (var streamReader = new System.IO.StreamReader(fileName))
                         {
-                            continue;
+                            string line;
+
+                            while ((line = streamReader.ReadLine()) != null)
+                            {
+                                if (line.Length == 0)
+                                {
+                                    continue;
+                                }
+
+                                var splitLine = line.Split(new[] { '\t' }, StringSplitOptions.None);
+
+                                if (splitLine.Length != 3)
+                                {
+                                    continue;
+                                }
+
+                                long address;
+
+                                if (!long.TryParse(splitLine[0], System.Globalization.NumberStyles.AllowHexSpecifier, null, out address))
+                                {
+                                    continue;
+                                }
+
+                                long offset = address - library.BaseAddress;
+
+                                if (offset < 0 || offset > 0x40000000)
+                                {
+                                    continue;
+                                }
+
+                                ulong id;
+                                offsetIdDictionary.TryGetValue((uint)offset, out id);
+
+                                if (id == 0)
+                                {
+                                    continue;
+                                }
+
+                                string name = splitLine[1];
+                                //if (!string.IsNullOrEmpty(splitLine[2])) { name = splitLine[2]; }
+                                name = PreProcessNameFromIDA(name, address);
+
+                                if (!string.IsNullOrEmpty(name))
+                                {
+                                    existingNames[id] = name;
+                                }
+                            }
                         }
 
-                        var splitLine = line.Split(new[] { '\t' }, StringSplitOptions.None);
+                        existingNamesList.Add(existingNames);
+                    }
+                    catch (Exception exception)
+                    {
+                        ReportError(exception);
+                    }
+                }
+            }
 
-                        if (splitLine.Length != 3)
+            return existingNamesList;
+        }
+
+        private bool IsExistingName(List<Dictionary<ulong, string>> existingNamesList, ulong id, string name)
+        {
+            if (existingNamesList != null)
+            {
+                foreach (var existingNames in existingNamesList)
+                {
+                    if (existingNames != null)
+                    {
+                        string existingName;
+
+                        if (existingNames.TryGetValue(id, out existingName) && existingName == name)
                         {
-                            continue;
-                        }
-
-                        long address;
-
-                        if (!long.TryParse(splitLine[0], System.Globalization.NumberStyles.AllowHexSpecifier, null, out address))
-                        {
-                            continue;
-                        }
-
-                        string name = splitLine[1];
-                        //if (!string.IsNullOrEmpty(splitLine[2])) { name = splitLine[2]; }
-                        name = PreProcessNameFromIDA(name, address);
-
-                        if (!string.IsNullOrEmpty(name))
-                        {
-                            existingAddresses[address] = name;
+                            return true;
                         }
                     }
                 }
             }
-            catch (Exception exception)
-            {
-                ReportError(exception);
-            }
 
-            return existingAddresses;
+            return false;
         }
 
         private void WriteIDANames(bool ida7)
@@ -1472,7 +1530,7 @@ namespace AddressLibraryManager
                 return;
             }
 
-            var existingAddresses = GetExistingAddresses();
+            var existingNamesList = GetExistingNames();
 
             try
             {
@@ -1516,17 +1574,12 @@ namespace AddressLibraryManager
                             continue;
                         }
 
-                        long address = library.BaseAddress + offset;
-
-                        if (existingAddresses != null)
+                        if (IsExistingName(existingNamesList, idNamePair.Key, name))
                         {
-                            string existingName;
-
-                            if (existingAddresses.TryGetValue(address, out existingName) && existingName == name)
-                            {
-                                continue;
-                            }
+                            continue;
                         }
+
+                        long address = library.BaseAddress + offset;
 
                         name = PreProcessNameToIDA(name, address);
                         name = name.Replace("\"", "\\\"");
