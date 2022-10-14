@@ -1125,112 +1125,196 @@ namespace AddressLibraryManager
             this.MarkModified(1);
         }
 
+        internal const char AddressPlaceholderSymbol = '*';
+        internal const string AddressPlaceholderString = "*";
+
+        private static string PreProcessNameFromIDA(string n, long addr)
+        {
+            if (string.IsNullOrEmpty(n))
+                return n;
+
+            string hex = addr.ToString("X");
+            if (n.Length > hex.Length && n.EndsWith(hex, StringComparison.OrdinalIgnoreCase))
+            {
+                n = n.Substring(0, n.Length - hex.Length);
+                n = n + AddressPlaceholderString;
+            }
+
+            return n;
+        }
+
+        private static string PreProcessNameToIDA(string n, long addr)
+        {
+            if (string.IsNullOrEmpty(n))
+                return n;
+
+            int ix;
+            while((ix = n.IndexOf('*')) >= 0)
+            {
+                n = n.Remove(ix, 1);
+                n = n.Insert(ix, addr.ToString("X"));
+            }
+
+            return n;
+        }
+
         private void button8_Click(object sender, EventArgs e)
         {
-            if(Manager.CurrentDatabase == null)
+            if (Manager.CurrentDatabase == null)
             {
-                MessageBox.Show("Must load a database first!");
+                MessageBox.Show("A database must be loaded!");
+
                 return;
             }
 
-            if(Manager.CurrentDatabase.Versions == null || Manager.CurrentDatabase.Versions.Count == 0)
+            if (Manager.CurrentDatabase.Versions == null || Manager.CurrentDatabase.Versions.Count == 0)
             {
-                MessageBox.Show("Can't import names, there are no library versions created!");
+                MessageBox.Show("A library version must be created to import names!");
+
                 return;
             }
 
-            var ver = AskVersion(Manager.CurrentDatabase.Versions.Keys, "Select version of IDA database");
-            if (!ver.HasValue)
-                return;
+            var version = AskVersion(Manager.CurrentDatabase.Versions.Keys, "Select the version of the IDA database");
 
-            Library lib;
-            if(!Manager.CurrentDatabase.Versions.TryGetValue(ver.Value, out lib))
+            if (!version.HasValue)
+            {
+                return;
+            }
+
+            Library library;
+
+            if (!Manager.CurrentDatabase.Versions.TryGetValue(version.Value, out library))
             {
                 MessageBox.Show("Something went wrong.");
+
                 return;
             }
 
-            var of = new OpenFileDialog();
-            of.AddExtension = true;
-            of.DefaultExt = "txt";
-            of.CheckFileExists = true;
-            of.Title = "Select idanames.txt";
+            var existingNamesList = GetExistingNames();
 
-            var r = of.ShowDialog();
-            if (r != DialogResult.OK)
+            var openFileDialogue = new OpenFileDialog();
+            openFileDialogue.AddExtension = true;
+            openFileDialogue.DefaultExt = "txt";
+            openFileDialogue.CheckFileExists = true;
+            openFileDialogue.Title = "Select idanames.txt";
+
+            var openFileDialogueResult = openFileDialogue.ShowDialog();
+
+            if (openFileDialogueResult != DialogResult.OK)
+            {
                 return;
+            }
 
             try
             {
-                var map = Manager.CurrentDatabase.Names;
-                if (map == null)
-                    map = new SortedDictionary<ulong, string>();
+                var idNameDictionary = Manager.CurrentDatabase.Names;
+
+                if (idNameDictionary == null)
+                {
+                    idNameDictionary = new SortedDictionary<ulong, string>();
+                }
 
                 int missingId = 0;
                 int changedId = 0;
-                Dictionary<uint, ulong> revv = new Dictionary<uint, ulong>();
-                if(lib.Values != null)
+
+                var offsetIdDictionary = new Dictionary<uint, ulong>();
+
+                if (library.Values != null)
                 {
-                    foreach (var pair in lib.Values)
-                        revv[pair.Value] = pair.Key;
-                }
-                var fi = new System.IO.FileInfo(of.FileName);
-                using (var f = new System.IO.StreamReader(fi.FullName))
-                {
-                    string l;
-                    int nr = 0;
-                    while((l = f.ReadLine()) != null)
+                    foreach (var idOffsetPair in library.Values)
                     {
-                        nr++;
-                        if (l.Length == 0)
-                            continue;
+                        offsetIdDictionary[idOffsetPair.Value] = idOffsetPair.Key;
+                    }
+                }
 
-                        var spl = l.Split(new[] { '\t' }, StringSplitOptions.None);
-                        if(spl.Length != 3)
-                            throw new FormatException("Invalid format on line " + nr + ": " + l);
+                var fileInfo = new System.IO.FileInfo(openFileDialogue.FileName);
 
-                        long addr;
-                        if(!long.TryParse(spl[0], System.Globalization.NumberStyles.AllowHexSpecifier, null, out addr))
-                            throw new FormatException("Invalid format on line " + nr + ": " + l);
+                using (var streamReader = new System.IO.StreamReader(fileInfo.FullName))
+                {
+                    string line;
+                    int lineNumber = 0;
 
-                        long offset = addr - lib.BaseAddress;
-                        if (offset < 0 || offset > 0x40000000)
-                            throw new FormatException("Bad address on line " + nr + ": " + addr);
+                    while ((line = streamReader.ReadLine()) != null)
+                    {
+                        lineNumber++;
 
-                        ulong id;
-                        revv.TryGetValue((uint)offset, out id);
-
-                        if(id == 0)
+                        if (line.Length == 0)
                         {
-                            missingId++;
                             continue;
                         }
 
-                        string n = spl[1];
-                        //if (!string.IsNullOrEmpty(spl[2])) n = spl[2];
-                        string prev;
-                        if(!map.TryGetValue(id, out prev) || prev != n)
+                        var splitLine = line.Split(new[] { '\t' }, StringSplitOptions.None);
+
+                        if (splitLine.Length != 3)
                         {
-                            map[id] = n;
+                            throw new FormatException("Invalid format on line " + lineNumber + ": " + line);
+                        }
+
+                        long address;
+
+                        if (!long.TryParse(splitLine[0], System.Globalization.NumberStyles.AllowHexSpecifier, null, out address))
+                        {
+                            throw new FormatException("Invalid format on line " + lineNumber + ": " + line);
+                        }
+
+                        long offset = address - library.BaseAddress;
+
+                        if (offset < 0 || offset > 0x40000000)
+                        {
+                            throw new FormatException("Address out of bounds on line " + lineNumber + ": " + address);
+                        }
+
+                        ulong id;
+                        offsetIdDictionary.TryGetValue((uint)offset, out id);
+
+                        if (id == 0)
+                        {
+                            missingId++;
+
+                            continue;
+                        }
+
+                        string name = splitLine[1];
+                        //if (!string.IsNullOrEmpty(splitLine[2])) { name = splitLine[2]; }
+                        name = PreProcessNameFromIDA(name, address);
+
+                        if (IsExistingName(existingNamesList, id, name))
+                        {
+                            continue;
+                        }
+
+                        string previousName;
+
+                        if (!idNameDictionary.TryGetValue(id, out previousName) || previousName != name)
+                        {
+                            idNameDictionary[id] = name;
                             changedId++;
                         }
                     }
                 }
 
-                if(changedId > 0)
+                if (changedId > 0)
+                {
                     this.MarkModified(2);
+                }
 
-                if (map.Count != 0)
-                    Manager.CurrentDatabase.Names = map;
+                if (idNameDictionary.Count != 0)
+                {
+                    Manager.CurrentDatabase.Names = idNameDictionary;
+                }
 
-                string errorc = "";
+                string missingIdErrorMessage = "";
+
                 if (missingId > 0)
-                    errorc = string.Format(" Unable to edit {0} names because the IDs were missing!", missingId);
-                MessageBox.Show("Modified " + changedId + " names." + errorc);
+                {
+                    missingIdErrorMessage = " Unable to edit " + missingId + " names because the IDs were missing!";
+                }
+
+                MessageBox.Show("Modified " + changedId + " names." + missingIdErrorMessage);
             }
-            catch(Exception ex)
+            catch (Exception exception)
             {
-                ReportError(ex);
+                ReportError(exception);
             }
         }
 
@@ -1261,155 +1345,271 @@ namespace AddressLibraryManager
             Manager.CurrentDatabase.Names = all;
             this.MarkModified(2);
         }
-        
+
+        private List<Dictionary<ulong, string>> GetExistingNames()
+        {
+            List<Dictionary<ulong, string>> existingNamesList = null;
+
+            var messageBoxResult = MessageBox.Show(
+                "Do you only want to write names that have changed? If so, names will be compared against the base idanames.txt files provided for each version in the Names subdirectory.",
+                "Question",
+                MessageBoxButtons.YesNo);
+
+            if (messageBoxResult != DialogResult.Yes)
+            {
+                return existingNamesList;
+            }
+
+            existingNamesList = new List<Dictionary<ulong, string>>();
+
+            var namesDirectory = System.IO.Path.Combine(System.IO.Directory.GetCurrentDirectory(), "Names");
+
+            if (!System.IO.Directory.Exists(namesDirectory))
+            {
+                return existingNamesList;
+            }
+
+            foreach (var version in Manager.CurrentDatabase.Versions)
+            {
+                var versionDirectory = System.IO.Path.Combine(namesDirectory, version.Key.ToString());
+
+                if (!System.IO.Directory.Exists(versionDirectory))
+                {
+                    continue;
+                }
+
+                var library = version.Value;
+                var offsetIdDictionary = new Dictionary<uint, ulong>();
+
+                if (library.Values != null)
+                {
+                    foreach (var idOffsetPair in library.Values)
+                    {
+                        offsetIdDictionary[idOffsetPair.Value] = idOffsetPair.Key;
+                    }
+                }
+
+                foreach (var fileName in System.IO.Directory.GetFiles(versionDirectory))
+                {
+                    if (!System.IO.Path.GetExtension(fileName).Equals(".txt", StringComparison.OrdinalIgnoreCase))
+                    {
+                        continue;
+                    }
+
+                    try
+                    {
+                        var existingNames = new Dictionary<ulong, string>();
+
+                        using (var streamReader = new System.IO.StreamReader(fileName))
+                        {
+                            string line;
+
+                            while ((line = streamReader.ReadLine()) != null)
+                            {
+                                if (line.Length == 0)
+                                {
+                                    continue;
+                                }
+
+                                var splitLine = line.Split(new[] { '\t' }, StringSplitOptions.None);
+
+                                if (splitLine.Length != 3)
+                                {
+                                    continue;
+                                }
+
+                                long address;
+
+                                if (!long.TryParse(splitLine[0], System.Globalization.NumberStyles.AllowHexSpecifier, null, out address))
+                                {
+                                    continue;
+                                }
+
+                                long offset = address - library.BaseAddress;
+
+                                if (offset < 0 || offset > 0x40000000)
+                                {
+                                    continue;
+                                }
+
+                                ulong id;
+                                offsetIdDictionary.TryGetValue((uint)offset, out id);
+
+                                if (id == 0)
+                                {
+                                    continue;
+                                }
+
+                                string name = splitLine[1];
+                                //if (!string.IsNullOrEmpty(splitLine[2])) { name = splitLine[2]; }
+                                name = PreProcessNameFromIDA(name, address);
+
+                                if (!string.IsNullOrEmpty(name))
+                                {
+                                    existingNames[id] = name;
+                                }
+                            }
+                        }
+
+                        existingNamesList.Add(existingNames);
+                    }
+                    catch (Exception exception)
+                    {
+                        ReportError(exception);
+                    }
+                }
+            }
+
+            return existingNamesList;
+        }
+
+        private bool IsExistingName(List<Dictionary<ulong, string>> existingNamesList, ulong id, string name)
+        {
+            if (existingNamesList != null)
+            {
+                foreach (var existingNames in existingNamesList)
+                {
+                    if (existingNames != null)
+                    {
+                        string existingName;
+
+                        if (existingNames.TryGetValue(id, out existingName) && existingName == name)
+                        {
+                            return true;
+                        }
+                    }
+                }
+            }
+
+            return false;
+        }
+
         private void WriteIDANames(bool ida7)
         {
             if (Manager.CurrentDatabase == null)
             {
-                MessageBox.Show("You must load the database first!");
+                MessageBox.Show("A database must be loaded!");
+
                 return;
             }
 
             if (Manager.CurrentDatabase.Names == null || Manager.CurrentDatabase.Names.Count == 0)
             {
-                MessageBox.Show("There are no names defined, nothing to export.");
+                MessageBox.Show("No names are defined to export!");
+
                 return;
             }
 
             if (Manager.CurrentDatabase.Versions == null || Manager.CurrentDatabase.Versions.Count == 0)
             {
-                MessageBox.Show("There are no versions defined, unable to calculate offsets!");
+                MessageBox.Show("A library version must be created to export names!");
+
                 return;
             }
 
-            var ver = AskVersion(Manager.CurrentDatabase.Versions.Keys, "Select version in IDA");
-            if (!ver.HasValue)
-                return;
+            var version = AskVersion(Manager.CurrentDatabase.Versions.Keys, "Select the version of the IDA database");
 
-            Library lib;
-            if (!Manager.CurrentDatabase.Versions.TryGetValue(ver.Value, out lib))
+            if (!version.HasValue)
+            {
+                return;
+            }
+
+            Library library;
+
+            if (!Manager.CurrentDatabase.Versions.TryGetValue(version.Value, out library))
             {
                 MessageBox.Show("Something went wrong.");
+
                 return;
             }
 
-            if (lib.Values == null || lib.Values.Count == 0)
+            if (library.Values == null || library.Values.Count == 0)
             {
-                MessageBox.Show("That version doesn't have any offsets defined, unable to export!");
+                MessageBox.Show("No offsets are defined to export!");
+
                 return;
             }
 
-            var onlyChanged = MessageBox.Show("Do you only want to write names that have changed? If you click yes then you will be asked for idanames.txt file, and only names that are different from that file will be exported.", "Question", MessageBoxButtons.YesNoCancel);
-            if (onlyChanged == DialogResult.Cancel)
-                return;
-
-            Dictionary<long, string> already = null;
-            if (onlyChanged == DialogResult.Yes)
-            {
-                already = new Dictionary<long, string>();
-
-                var of = new OpenFileDialog();
-                of.AddExtension = true;
-                of.DefaultExt = "txt";
-                of.CheckFileExists = true;
-                of.Title = "Select idanames.txt";
-
-                var r = of.ShowDialog();
-                if (r != DialogResult.OK)
-                    return;
-
-                try
-                {
-                    using (var swp = new System.IO.StreamReader(of.FileName))
-                    {
-                        string l;
-                        while ((l = swp.ReadLine()) != null)
-                        {
-                            if (l.Length == 0)
-                                continue;
-
-                            var spl = l.Split(new[] { '\t' }, StringSplitOptions.None);
-                            if (spl.Length != 3)
-                                continue;
-
-                            long addr;
-                            if (!long.TryParse(spl[0], System.Globalization.NumberStyles.AllowHexSpecifier, null, out addr))
-                                continue;
-
-                            string n = spl[1];
-                            //if (!string.IsNullOrEmpty(spl[2])) n = spl[2];
-
-                            if (!string.IsNullOrEmpty(n))
-                                already[addr] = n;
-                        }
-                    }
-                }
-                catch (Exception ex)
-                {
-                    ReportError(ex);
-                }
-            }
+            var existingNamesList = GetExistingNames();
 
             try
             {
                 int missingId = 0;
                 int writeId = 0;
 
-                var fi = new System.IO.FileInfo("SetNamesInIDA.py");
-                using (var sw = new System.IO.StreamWriter(fi.FullName, false, new UTF8Encoding(false)))
+                var fileInfo = new System.IO.FileInfo("SetNamesInIDA.py");
+
+                using (var streamWriter = new System.IO.StreamWriter(fileInfo.FullName, false, new UTF8Encoding(false)))
                 {
-                    sw.WriteLine("def NameAddr(ea, name):");
+                    streamWriter.WriteLine("def NameAddr(ea, name):");
+
                     if (!ida7)
-                        sw.WriteLine("    idc.MakeName(ea, name)");
-                    else
-                        sw.WriteLine("    idc.set_name(ea, name, SN_CHECK)");
-                    sw.WriteLine();
-                    sw.WriteLine("print \"Importing names...\"");
-                    sw.WriteLine();
-                    foreach (var pair in Manager.CurrentDatabase.Names)
                     {
-                        string n = (pair.Value ?? "");
-                        if (n.Length == 0)
+                        streamWriter.WriteLine("    idc.MakeName(ea, name)");
+                    }
+                    else
+                    {
+                        streamWriter.WriteLine("    idc.set_name(ea, name, SN_CHECK)");
+                    }
+
+                    streamWriter.WriteLine();
+                    streamWriter.WriteLine("print (\"Importing names...\")");
+                    streamWriter.WriteLine();
+
+                    foreach (var idNamePair in Manager.CurrentDatabase.Names)
+                    {
+                        string name = (idNamePair.Value ?? "");
+
+                        if (name.Length == 0)
+                        {
                             continue;
+                        }
 
                         uint offset;
-                        if (!lib.Values.TryGetValue(pair.Key, out offset))
+
+                        if (!library.Values.TryGetValue(idNamePair.Key, out offset))
                         {
                             missingId++;
+
                             continue;
                         }
 
-                        long addr = lib.BaseAddress + offset;
-                        if (already != null)
+                        if (IsExistingName(existingNamesList, idNamePair.Key, name))
                         {
-                            string prev;
-                            if (already.TryGetValue(addr, out prev) && prev == n)
-                                continue;
+                            continue;
                         }
 
-                        n = n.Replace("\"", "\\\"");
+                        long address = library.BaseAddress + offset;
 
-                        sw.Write("NameAddr(0x");
-                        sw.Write(addr.ToString("X"));
-                        sw.Write(", \"");
-                        sw.Write(n);
-                        sw.Write("\")");
-                        sw.WriteLine();
+                        name = PreProcessNameToIDA(name, address);
+                        name = name.Replace("\"", "\\\"");
+
+                        streamWriter.Write("NameAddr(0x");
+                        streamWriter.Write(address.ToString("X"));
+                        streamWriter.Write(", \"");
+                        streamWriter.Write(name);
+                        streamWriter.Write("\")");
+                        streamWriter.WriteLine();
+
                         writeId++;
                     }
 
-                    sw.WriteLine();
-                    sw.WriteLine("print \"Done with name import\"");
+                    streamWriter.WriteLine();
+                    streamWriter.WriteLine("print (\"Done with name import\")");
                 }
 
-                string stats = "Wrote " + writeId + " renames.";
+                string statistics = writeId + " names have been written.";
+
                 if (missingId > 0)
-                    stats += " Failed to write " + missingId + " because the IDs were not found.";
-                MessageBox.Show(stats + Environment.NewLine + "Wrote file " + fi.Name + " to " + fi.DirectoryName + "!" + Environment.NewLine + "Run this as a script file in IDA.");
+                {
+                    statistics += " Failed to write " + missingId + " names because their IDs were not found.";
+                }
+
+                MessageBox.Show(statistics + Environment.NewLine + "The file " + fileInfo.Name + " has been written to " + fileInfo.DirectoryName + "!" + Environment.NewLine + "Run this script in IDA to set names.");
             }
-            catch (Exception ex)
+            catch (Exception exception)
             {
-                ReportError(ex);
+                ReportError(exception);
             }
         }
 
