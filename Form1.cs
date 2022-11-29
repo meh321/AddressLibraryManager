@@ -1111,7 +1111,7 @@ namespace AddressLibraryManager
 
             long addr = 0;
 
-            string has = this.textBox4.Text;
+            string has = this.textBox5.Text;
             if (has.Length != 0)
             {
                 if (!long.TryParse(has, System.Globalization.NumberStyles.AllowHexSpecifier, null, out addr))
