@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
 using System.Drawing;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -637,7 +638,7 @@ namespace AddressLibraryManager
                     if(prev_lib.Values != null)
                     {
                         foreach (var pair in prev_lib.Values)
-                            all.AddNew(new _loadHelper._loadEntry() { Prev = pair.Value, Next = uint.MaxValue, Id = pair.Key });
+                            all.AddNew(new _loadHelper._loadEntry() { Prev = pair.Value, Next = uint.MaxValue, Id = pair.Key }, false);
                     }
                     if(next_lib.Values != null)
                     {
@@ -645,12 +646,12 @@ namespace AddressLibraryManager
                         {
                             var v = all.GetId(pair.Key);
                             if (v == null)
-                                all.AddNew(new _loadHelper._loadEntry() { Prev = uint.MaxValue, Next = pair.Value, Id = pair.Key });
+                                all.AddNew(new _loadHelper._loadEntry() { Prev = uint.MaxValue, Next = pair.Value, Id = pair.Key }, false);
                             else
                             {
-                                all.Remove(v);
+                                all.Remove(v, true);
                                 v.Next = pair.Value;
-                                all.AddNew(v);
+                                all.AddNew(v, true);
                             }
                         }
                     }
@@ -694,9 +695,9 @@ namespace AddressLibraryManager
                                     errorMatch++;
                                 if (v.Next != xb)
                                 {
-                                    all.Remove(v);
+                                    all.Remove(v, true);
                                     v.Next = xb;
-                                    all.AddNew(v);
+                                    all.AddNew(v, true);
                                 }
                             }
                             else
@@ -708,13 +709,13 @@ namespace AddressLibraryManager
                                         errorMatch++;
                                     if (v.Prev != xa)
                                     {
-                                        all.Remove(v);
+                                        all.Remove(v, true);
                                         v.Prev = xa;
-                                        all.AddNew(v);
+                                        all.AddNew(v, true);
                                     }
                                 }
                                 else
-                                    all.AddNew(new _loadHelper._loadEntry() { Prev = xa, Next = xb, Id = 0 });
+                                    all.AddNew(new _loadHelper._loadEntry() { Prev = xa, Next = xb, Id = 0 }, false);
                             }
                         }
                     }
@@ -740,7 +741,7 @@ namespace AddressLibraryManager
 
                             var v = all.GetPrev(xa);
                             if (v == null)
-                                all.AddNew(new _loadHelper._loadEntry() { Prev = xa, Next = uint.MaxValue, Id = 0 });
+                                all.AddNew(new _loadHelper._loadEntry() { Prev = xa, Next = uint.MaxValue, Id = 0 }, false);
                         }
                     }
                     using (var sw = new System.IO.StreamReader(fi_next.FullName, new UTF8Encoding(false)))
@@ -765,7 +766,7 @@ namespace AddressLibraryManager
 
                             var v = all.GetNext(xa);
                             if (v == null)
-                                all.AddNew(new _loadHelper._loadEntry() { Prev = uint.MaxValue, Next = xa, Id = 0 });
+                                all.AddNew(new _loadHelper._loadEntry() { Prev = uint.MaxValue, Next = xa, Id = 0 }, false);
                         }
                     }
 
@@ -869,7 +870,7 @@ namespace AddressLibraryManager
             internal readonly Dictionary<ulong, _loadEntry> MapId = new Dictionary<ulong, _loadEntry>();
             internal readonly List<_loadEntry> All = new List<_loadEntry>();
 
-            internal void AddNew(_loadEntry e)
+            internal void AddNew(_loadEntry e, bool noadd)
             {
                 if (e.Prev != uint.MaxValue)
                     this.MapPrev[e.Prev] = e;
@@ -877,10 +878,11 @@ namespace AddressLibraryManager
                     this.MapNext[e.Next] = e;
                 if (e.Id != 0)
                     this.MapId[e.Id] = e;
-                this.All.Add(e);
+                if(!noadd)
+                    this.All.Add(e);
             }
 
-            internal void Remove(_loadEntry e)
+            internal void Remove(_loadEntry e, bool norem)
             {
                 if (e.Prev != uint.MaxValue)
                     this.MapPrev.Remove(e.Prev);
@@ -888,7 +890,8 @@ namespace AddressLibraryManager
                     this.MapNext.Remove(e.Next);
                 if (e.Id != 0)
                     this.MapId.Remove(e.Id);
-                this.All.Remove(e);
+                if(!norem)
+                    this.All.Remove(e);
             }
 
             internal _loadEntry GetPrev(uint value)
@@ -1031,7 +1034,9 @@ namespace AddressLibraryManager
 
             try
             {
-                var fi = new System.IO.FileInfo("offsets.txt");
+                string suffix = string.Join("-", lib.Version.Numbers);
+
+                var fi = new System.IO.FileInfo("offsets-" + suffix + ".txt");
                 using (var sw = new System.IO.StreamWriter(fi.FullName, false))
                 {
                     if (lib.Values != null)
@@ -1046,7 +1051,7 @@ namespace AddressLibraryManager
                     }
                 }
 
-                MessageBox.Show("Wrote offsets.txt to " + fi.DirectoryName + "!");
+                MessageBox.Show("Wrote offsets-" + suffix + ".txt to " + fi.DirectoryName + "!");
             }
             catch(Exception ex)
             {
@@ -1621,6 +1626,360 @@ namespace AddressLibraryManager
         private void button12_Click(object sender, EventArgs e)
         {
             this.WriteIDANames(true);
+        }
+
+        private void createNewVersionForMultiplePlatformsAndDoCrossdiffImportFromIDADiffCalculatorResultsToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            var f = new MultiImport();
+            if (f.ShowDialog() != DialogResult.OK)
+                return;
+
+            this.MarkModified(1);
+        }
+
+        private sealed class wronginfo
+        {
+            internal long[] Address = new long[4];
+            internal string Text;
+        }
+
+        private static string PreprocessName(string input)
+        {
+            int index;
+            while ((index = input.IndexOf("lambda_")) >= 0)
+            {
+                int end = index + 7;
+                while (end < input.Length)
+                {
+                    char ch = input[end];
+                    if ((ch >= '0' && ch <= '9') || (ch >= 'a' && ch <= 'f') || (ch >= 'A' && ch <= 'F'))
+                    {
+                        end++;
+                        continue;
+                    }
+                    break;
+                }
+
+                input = input.Remove(index, end - index);
+                input = input.Insert(index, "LMBDA_REPLACED");
+            }
+
+            if (input.Length != 0 && input[0] == 'a')
+            {
+                bool did = false;
+                int end = input.Length - 1;
+                while (end >= 0)
+                {
+                    char ch = input[end];
+                    if (ch >= '0' && ch <= '9')
+                    {
+                        end--;
+                        continue;
+                    }
+
+                    if(ch == '_')
+                    {
+                        if (end == input.Length - 1)
+                            break;
+
+                        input = input.Substring(0, end);
+                        did = true;
+                        break;
+                    }
+
+                    break;
+                }
+
+                if(!did && (input.Length == 15 || input.Length == 14))
+                    input = input.Substring(0, 13);
+            }
+
+            if (input.StartsWith("nullsub_"))
+                return "nullsub";
+
+            return input;
+        }
+
+        private void iDSanityCheckToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            var db = Manager.CurrentDatabase;
+            if(db == null)
+            {
+                MessageBox.Show("Load database first!");
+                return;
+            }
+
+            var first = AskVersion(db.Versions.Keys, "Select first version");
+            if (!first.HasValue)
+                return;
+
+            var second = AskVersion(db.Versions.Keys, "Select second version");
+            if (!second.HasValue)
+                return;
+
+            if(first.Value.Equals(second.Value))
+            {
+                MessageBox.Show("These are just two of the same version!");
+                return;
+            }
+
+            var of = new OpenFileDialog();
+            of.AddExtension = true;
+            of.CheckFileExists = true;
+            of.DefaultExt = "txt";
+            of.Multiselect = false;
+            of.Title = "Select idaexport_name.txt of " + first.Value.ToString() + " export";
+
+            var r = of.ShowDialog();
+            if (r != DialogResult.OK)
+                return;
+
+            var afi = new FileInfo(of.FileName);
+
+            of = new OpenFileDialog();
+            of.AddExtension = true;
+            of.CheckFileExists = true;
+            of.DefaultExt = "txt";
+            of.Multiselect = false;
+            of.Title = "Select idaexport_name.txt of " + second.Value.ToString() + " export";
+
+            r = of.ShowDialog();
+            if (r != DialogResult.OK)
+                return;
+
+            var bfi = new FileInfo(of.FileName);
+
+            Dictionary<string, uint> amap = new Dictionary<string, uint>();
+            Dictionary<string, uint> bmap = new Dictionary<string, uint>();
+
+            try
+            {
+                using(var f = afi.OpenText())
+                {
+                    string l;
+                    l = f.ReadLine();
+                    if (l == null)
+                        throw new FormatException();
+
+                    var spl = l.Split(new[] { '\t' }, StringSplitOptions.RemoveEmptyEntries);
+                    if (spl.Length != 2 || spl[0] != "version")
+                        throw new FormatException();
+
+                    long addr = db.Versions[first.Value].BaseAddress;
+
+                    while((l = f.ReadLine()) != null)
+                    {
+                        if (l.Length == 0)
+                            continue;
+
+                        spl = l.Split(new[] { '\t' }, StringSplitOptions.RemoveEmptyEntries);
+                        if (spl.Length < 3 || spl[0] != "name")
+                            throw new FormatException();
+
+                        long n;
+                        if (!long.TryParse(spl[1], System.Globalization.NumberStyles.AllowHexSpecifier, null, out n) || n < 0)
+                            throw new FormatException();
+
+                        n -= addr;
+                        if (n < 0 || n >= uint.MaxValue)
+                            throw new FormatException();
+
+                        string t = spl[2];
+                        t = PreprocessName(t);
+
+                        uint prev;
+                        if (amap.TryGetValue(t, out prev))
+                        {
+                            if (prev != uint.MaxValue)
+                                amap[t] = uint.MaxValue;
+                        }
+                        else
+                            amap[t] = (uint)n;
+                    }
+                }
+
+                using (var f = bfi.OpenText())
+                {
+                    string l;
+                    l = f.ReadLine();
+                    if (l == null)
+                        throw new FormatException();
+
+                    var spl = l.Split(new[] { '\t' }, StringSplitOptions.RemoveEmptyEntries);
+                    if (spl.Length != 2 || spl[0] != "version")
+                        throw new FormatException();
+
+                    long addr = db.Versions[second.Value].BaseAddress;
+
+                    while ((l = f.ReadLine()) != null)
+                    {
+                        if (l.Length == 0)
+                            continue;
+
+                        spl = l.Split(new[] { '\t' }, StringSplitOptions.RemoveEmptyEntries);
+                        if (spl.Length < 3 || spl[0] != "name")
+                            throw new FormatException();
+
+                        long n;
+                        if (!long.TryParse(spl[1], System.Globalization.NumberStyles.AllowHexSpecifier, null, out n) || n < 0)
+                            throw new FormatException();
+
+                        n -= addr;
+                        if (n < 0 || n >= uint.MaxValue)
+                            throw new FormatException();
+
+                        string t = spl[2];
+                        t = PreprocessName(t);
+
+                        uint prev;
+                        if (bmap.TryGetValue(t, out prev))
+                        {
+                            if (prev != uint.MaxValue)
+                                bmap[t] = uint.MaxValue;
+                        }
+                        else
+                            bmap[t] = (uint)n;
+                    }
+                }
+
+                int didnt_check = 0;
+                int correct = 0;
+                int wrong = 0;
+                int total = 0;
+                int unmatched = 0;
+
+                var alib = db.Versions[first.Value];
+                var blib = db.Versions[second.Value];
+
+                Dictionary<uint, ulong> alookup = new Dictionary<uint, ulong>();
+                Dictionary<uint, ulong> blookup = new Dictionary<uint, ulong>();
+
+                if(alib.Values != null)
+                {
+                    foreach (var pair in alib.Values)
+                        alookup[pair.Value] = pair.Key;
+                }
+
+                if(blib.Values != null)
+                {
+                    foreach (var pair in blib.Values)
+                        blookup[pair.Value] = pair.Key;
+                }
+
+                var examples = new List<wronginfo>();
+
+                foreach(var pair in amap)
+                {
+                    uint av = pair.Value;
+                    uint bv;
+
+                    if(av == uint.MaxValue || !bmap.TryGetValue(pair.Key, out bv) || bv == uint.MaxValue)
+                    {
+                        didnt_check++;
+                        continue;
+                    }
+
+                    ulong aid = 0;
+                    ulong bid = 0;
+
+                    alookup.TryGetValue(av, out aid);
+                    blookup.TryGetValue(bv, out bid);
+
+                    if(aid == 0 && bid == 0)
+                    {
+                        didnt_check++;
+                        continue;
+                    }
+
+                    if(aid == 0 || bid == 0)
+                    {
+                        unmatched++;
+                        total++;
+                        continue;
+                    }
+
+                    if (aid != bid)
+                    {
+                        uint cv = 0;
+                        blib.Values.TryGetValue(aid, out cv);
+                        var info = new wronginfo();
+                        info.Text = pair.Key;
+                        info.Address[0] = av + alib.BaseAddress;
+                        info.Address[1] = bv + blib.BaseAddress;
+                        if(cv != 0)
+                            info.Address[2] = cv + blib.BaseAddress;
+                        alib.Values.TryGetValue(bid, out cv);
+                        if(cv != 0)
+                            info.Address[3] = cv + alib.BaseAddress;
+                        if (info.Address[2] != 0 || info.Address[3] != 0)
+                        {
+                            wrong++;
+                            examples.Add(info);
+                        }
+                        else
+                            unmatched++;
+                    }
+                    else
+                        correct++;
+                    total++;
+                }
+
+                foreach(var pair in bmap)
+                {
+                    if (amap.ContainsKey(pair.Key))
+                        continue;
+
+                    didnt_check++;
+                }
+
+                var some_examples = new List<wronginfo>();
+                var rnd = new Random();
+                while(some_examples.Count < 20 && examples.Count != 0)
+                {
+                    int ri = rnd.Next(0, examples.Count);
+                    var v = examples[ri];
+                    examples.RemoveAt(ri);
+                    some_examples.Add(v);
+                }
+
+                var bld = new StringBuilder();
+                bld.AppendLine("Sanity checked version " + first.Value.ToString() + " to " + second.Value.ToString() + ":");
+                bld.AppendLine();
+                bld.AppendLine("Total: " + total);
+                if (total > 0)
+                {
+                    bld.AppendLine("Correct: " + correct + " (" + ((double)correct * 100.0 / (double)total).ToString("0.####") + "%)");
+                    bld.AppendLine("Unmatched: " + unmatched + " (" + ((double)unmatched * 100.0 / (double)total).ToString("0.####") + "%)");
+                    bld.AppendLine("Wrong: " + wrong + " (" + ((double)wrong * 100.0 / (double)total).ToString("0.####") + "%)");
+                }
+                bld.AppendLine("Didn't check: " + didnt_check);
+
+                if(some_examples.Count != 0)
+                {
+                    bld.AppendLine();
+                    bld.AppendLine("Some examples of wrong:");
+                    foreach(var pair in some_examples)
+                    {
+                        var str = new StringBuilder();
+                        str.Append(pair.Address[0].ToString("X"));
+                        str.Append(" -> ");
+                        str.Append(pair.Address[1].ToString("X"));
+                        str.Append(" | ");
+                        str.Append(pair.Address[3].ToString("X"));
+                        str.Append(" <- ");
+                        str.Append(pair.Address[2].ToString("X"));
+                        str.Append(" | ");
+                        str.Append(pair.Text);
+                        bld.AppendLine(str.ToString());
+                    }
+                }
+                MessageBox.Show(bld.ToString());
+            }
+            catch(Exception ex)
+            {
+                ReportError(ex);
+                return;
+            }
         }
     }
 }

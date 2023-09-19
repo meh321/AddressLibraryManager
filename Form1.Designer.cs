@@ -35,17 +35,29 @@
             this.saveToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.saveAsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.exitToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.toolsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.createNewVersionForMultiplePlatformsAndDoCrossdiffImportFromIDADiffCalculatorResultsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.splitContainer1 = new System.Windows.Forms.SplitContainer();
             this.listBox1 = new System.Windows.Forms.ListBox();
             this.panel1 = new System.Windows.Forms.Panel();
             this.button2 = new System.Windows.Forms.Button();
             this.button1 = new System.Windows.Forms.Button();
             this.groupBox3 = new System.Windows.Forms.GroupBox();
+            this.textBox5 = new System.Windows.Forms.TextBox();
+            this.label5 = new System.Windows.Forms.Label();
+            this.textBox4 = new System.Windows.Forms.TextBox();
+            this.label4 = new System.Windows.Forms.Label();
+            this.button7 = new System.Windows.Forms.Button();
             this.button6 = new System.Windows.Forms.Button();
             this.button5 = new System.Windows.Forms.Button();
             this.button4 = new System.Windows.Forms.Button();
             this.button3 = new System.Windows.Forms.Button();
             this.groupBox2 = new System.Windows.Forms.GroupBox();
+            this.button12 = new System.Windows.Forms.Button();
+            this.button11 = new System.Windows.Forms.Button();
+            this.button10 = new System.Windows.Forms.Button();
+            this.button9 = new System.Windows.Forms.Button();
+            this.button8 = new System.Windows.Forms.Button();
             this.groupBox1 = new System.Windows.Forms.GroupBox();
             this.textBox3 = new System.Windows.Forms.TextBox();
             this.label3 = new System.Windows.Forms.Label();
@@ -53,16 +65,7 @@
             this.label2 = new System.Windows.Forms.Label();
             this.textBox1 = new System.Windows.Forms.TextBox();
             this.label1 = new System.Windows.Forms.Label();
-            this.button7 = new System.Windows.Forms.Button();
-            this.textBox4 = new System.Windows.Forms.TextBox();
-            this.label4 = new System.Windows.Forms.Label();
-            this.textBox5 = new System.Windows.Forms.TextBox();
-            this.label5 = new System.Windows.Forms.Label();
-            this.button8 = new System.Windows.Forms.Button();
-            this.button9 = new System.Windows.Forms.Button();
-            this.button10 = new System.Windows.Forms.Button();
-            this.button11 = new System.Windows.Forms.Button();
-            this.button12 = new System.Windows.Forms.Button();
+            this.iDSanityCheckToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.menuStrip1.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.splitContainer1)).BeginInit();
             this.splitContainer1.Panel1.SuspendLayout();
@@ -77,7 +80,8 @@
             // menuStrip1
             // 
             this.menuStrip1.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
-            this.fileToolStripMenuItem});
+            this.fileToolStripMenuItem,
+            this.toolsToolStripMenuItem});
             this.menuStrip1.Location = new System.Drawing.Point(0, 0);
             this.menuStrip1.Name = "menuStrip1";
             this.menuStrip1.Size = new System.Drawing.Size(714, 24);
@@ -130,6 +134,23 @@
             this.exitToolStripMenuItem.Size = new System.Drawing.Size(112, 22);
             this.exitToolStripMenuItem.Text = "Exit";
             this.exitToolStripMenuItem.Click += new System.EventHandler(this.exitToolStripMenuItem_Click);
+            // 
+            // toolsToolStripMenuItem
+            // 
+            this.toolsToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this.createNewVersionForMultiplePlatformsAndDoCrossdiffImportFromIDADiffCalculatorResultsToolStripMenuItem,
+            this.iDSanityCheckToolStripMenuItem});
+            this.toolsToolStripMenuItem.Name = "toolsToolStripMenuItem";
+            this.toolsToolStripMenuItem.Size = new System.Drawing.Size(46, 20);
+            this.toolsToolStripMenuItem.Text = "Tools";
+            // 
+            // createNewVersionForMultiplePlatformsAndDoCrossdiffImportFromIDADiffCalculatorResultsToolStripMenuItem
+            // 
+            this.createNewVersionForMultiplePlatformsAndDoCrossdiffImportFromIDADiffCalculatorResultsToolStripMenuItem.Name = "createNewVersionForMultiplePlatformsAndDoCrossdiffImportFromIDADiffCalculatorResu" +
+    "ltsToolStripMenuItem";
+            this.createNewVersionForMultiplePlatformsAndDoCrossdiffImportFromIDADiffCalculatorResultsToolStripMenuItem.Size = new System.Drawing.Size(420, 22);
+            this.createNewVersionForMultiplePlatformsAndDoCrossdiffImportFromIDADiffCalculatorResultsToolStripMenuItem.Text = "Multiple platform cross-diff import from IDADiffCalculator results";
+            this.createNewVersionForMultiplePlatformsAndDoCrossdiffImportFromIDADiffCalculatorResultsToolStripMenuItem.Click += new System.EventHandler(this.createNewVersionForMultiplePlatformsAndDoCrossdiffImportFromIDADiffCalculatorResultsToolStripMenuItem_Click);
             // 
             // splitContainer1
             // 
@@ -211,6 +232,50 @@
             this.groupBox3.Text = "Version";
             this.groupBox3.Visible = false;
             // 
+            // textBox5
+            // 
+            this.textBox5.Location = new System.Drawing.Point(134, 192);
+            this.textBox5.Name = "textBox5";
+            this.textBox5.Size = new System.Drawing.Size(212, 20);
+            this.textBox5.TabIndex = 9;
+            this.textBox5.TextChanged += new System.EventHandler(this.textBox5_TextChanged);
+            // 
+            // label5
+            // 
+            this.label5.AutoSize = true;
+            this.label5.Location = new System.Drawing.Point(6, 195);
+            this.label5.Name = "label5";
+            this.label5.Size = new System.Drawing.Size(74, 13);
+            this.label5.TabIndex = 8;
+            this.label5.Text = "Base address:";
+            // 
+            // textBox4
+            // 
+            this.textBox4.Location = new System.Drawing.Point(134, 164);
+            this.textBox4.Name = "textBox4";
+            this.textBox4.Size = new System.Drawing.Size(212, 20);
+            this.textBox4.TabIndex = 7;
+            this.textBox4.TextChanged += new System.EventHandler(this.textBox4_TextChanged);
+            // 
+            // label4
+            // 
+            this.label4.AutoSize = true;
+            this.label4.Location = new System.Drawing.Point(6, 167);
+            this.label4.Name = "label4";
+            this.label4.Size = new System.Drawing.Size(122, 13);
+            this.label4.TabIndex = 6;
+            this.label4.Text = "Overwrite target module:";
+            // 
+            // button7
+            // 
+            this.button7.Location = new System.Drawing.Point(9, 135);
+            this.button7.Name = "button7";
+            this.button7.Size = new System.Drawing.Size(337, 23);
+            this.button7.TabIndex = 4;
+            this.button7.Text = "Edit manually";
+            this.button7.UseVisualStyleBackColor = true;
+            this.button7.Click += new System.EventHandler(this.button7_Click);
+            // 
             // button6
             // 
             this.button6.Location = new System.Drawing.Point(9, 106);
@@ -265,6 +330,56 @@
             this.groupBox2.TabStop = false;
             this.groupBox2.Text = "Names";
             this.groupBox2.Visible = false;
+            // 
+            // button12
+            // 
+            this.button12.Location = new System.Drawing.Point(6, 135);
+            this.button12.Name = "button12";
+            this.button12.Size = new System.Drawing.Size(337, 23);
+            this.button12.TabIndex = 14;
+            this.button12.Text = "Export names to IDA 7.x";
+            this.button12.UseVisualStyleBackColor = true;
+            this.button12.Click += new System.EventHandler(this.button12_Click);
+            // 
+            // button11
+            // 
+            this.button11.Location = new System.Drawing.Point(6, 106);
+            this.button11.Name = "button11";
+            this.button11.Size = new System.Drawing.Size(337, 23);
+            this.button11.TabIndex = 13;
+            this.button11.Text = "Export names to IDA 6.x";
+            this.button11.UseVisualStyleBackColor = true;
+            this.button11.Click += new System.EventHandler(this.button11_Click);
+            // 
+            // button10
+            // 
+            this.button10.Location = new System.Drawing.Point(6, 77);
+            this.button10.Name = "button10";
+            this.button10.Size = new System.Drawing.Size(337, 23);
+            this.button10.TabIndex = 12;
+            this.button10.Text = "Edit manually";
+            this.button10.UseVisualStyleBackColor = true;
+            this.button10.Click += new System.EventHandler(this.button10_Click);
+            // 
+            // button9
+            // 
+            this.button9.Location = new System.Drawing.Point(6, 48);
+            this.button9.Name = "button9";
+            this.button9.Size = new System.Drawing.Size(337, 23);
+            this.button9.TabIndex = 11;
+            this.button9.Text = "How do I get names from IDA to here?";
+            this.button9.UseVisualStyleBackColor = true;
+            this.button9.Click += new System.EventHandler(this.button9_Click);
+            // 
+            // button8
+            // 
+            this.button8.Location = new System.Drawing.Point(6, 19);
+            this.button8.Name = "button8";
+            this.button8.Size = new System.Drawing.Size(337, 23);
+            this.button8.TabIndex = 10;
+            this.button8.Text = "Import from IDA script result";
+            this.button8.UseVisualStyleBackColor = true;
+            this.button8.Click += new System.EventHandler(this.button8_Click);
             // 
             // groupBox1
             // 
@@ -333,99 +448,12 @@
             this.label1.TabIndex = 0;
             this.label1.Text = "High ID:";
             // 
-            // button7
+            // iDSanityCheckToolStripMenuItem
             // 
-            this.button7.Location = new System.Drawing.Point(9, 135);
-            this.button7.Name = "button7";
-            this.button7.Size = new System.Drawing.Size(337, 23);
-            this.button7.TabIndex = 4;
-            this.button7.Text = "Edit manually";
-            this.button7.UseVisualStyleBackColor = true;
-            this.button7.Click += new System.EventHandler(this.button7_Click);
-            // 
-            // textBox4
-            // 
-            this.textBox4.Location = new System.Drawing.Point(134, 164);
-            this.textBox4.Name = "textBox4";
-            this.textBox4.Size = new System.Drawing.Size(212, 20);
-            this.textBox4.TabIndex = 7;
-            this.textBox4.TextChanged += new System.EventHandler(this.textBox4_TextChanged);
-            // 
-            // label4
-            // 
-            this.label4.AutoSize = true;
-            this.label4.Location = new System.Drawing.Point(6, 167);
-            this.label4.Name = "label4";
-            this.label4.Size = new System.Drawing.Size(122, 13);
-            this.label4.TabIndex = 6;
-            this.label4.Text = "Overwrite target module:";
-            // 
-            // textBox5
-            // 
-            this.textBox5.Location = new System.Drawing.Point(134, 192);
-            this.textBox5.Name = "textBox5";
-            this.textBox5.Size = new System.Drawing.Size(212, 20);
-            this.textBox5.TabIndex = 9;
-            this.textBox5.TextChanged += new System.EventHandler(this.textBox5_TextChanged);
-            // 
-            // label5
-            // 
-            this.label5.AutoSize = true;
-            this.label5.Location = new System.Drawing.Point(6, 195);
-            this.label5.Name = "label5";
-            this.label5.Size = new System.Drawing.Size(74, 13);
-            this.label5.TabIndex = 8;
-            this.label5.Text = "Base address:";
-            // 
-            // button8
-            // 
-            this.button8.Location = new System.Drawing.Point(6, 19);
-            this.button8.Name = "button8";
-            this.button8.Size = new System.Drawing.Size(337, 23);
-            this.button8.TabIndex = 10;
-            this.button8.Text = "Import from IDA script result";
-            this.button8.UseVisualStyleBackColor = true;
-            this.button8.Click += new System.EventHandler(this.button8_Click);
-            // 
-            // button9
-            // 
-            this.button9.Location = new System.Drawing.Point(6, 48);
-            this.button9.Name = "button9";
-            this.button9.Size = new System.Drawing.Size(337, 23);
-            this.button9.TabIndex = 11;
-            this.button9.Text = "How do I get names from IDA to here?";
-            this.button9.UseVisualStyleBackColor = true;
-            this.button9.Click += new System.EventHandler(this.button9_Click);
-            // 
-            // button10
-            // 
-            this.button10.Location = new System.Drawing.Point(6, 77);
-            this.button10.Name = "button10";
-            this.button10.Size = new System.Drawing.Size(337, 23);
-            this.button10.TabIndex = 12;
-            this.button10.Text = "Edit manually";
-            this.button10.UseVisualStyleBackColor = true;
-            this.button10.Click += new System.EventHandler(this.button10_Click);
-            // 
-            // button11
-            // 
-            this.button11.Location = new System.Drawing.Point(6, 106);
-            this.button11.Name = "button11";
-            this.button11.Size = new System.Drawing.Size(337, 23);
-            this.button11.TabIndex = 13;
-            this.button11.Text = "Export names to IDA 6.x";
-            this.button11.UseVisualStyleBackColor = true;
-            this.button11.Click += new System.EventHandler(this.button11_Click);
-            // 
-            // button12
-            // 
-            this.button12.Location = new System.Drawing.Point(6, 135);
-            this.button12.Name = "button12";
-            this.button12.Size = new System.Drawing.Size(337, 23);
-            this.button12.TabIndex = 14;
-            this.button12.Text = "Export names to IDA 7.x";
-            this.button12.UseVisualStyleBackColor = true;
-            this.button12.Click += new System.EventHandler(this.button12_Click);
+            this.iDSanityCheckToolStripMenuItem.Name = "iDSanityCheckToolStripMenuItem";
+            this.iDSanityCheckToolStripMenuItem.Size = new System.Drawing.Size(420, 22);
+            this.iDSanityCheckToolStripMenuItem.Text = "ID sanity check";
+            this.iDSanityCheckToolStripMenuItem.Click += new System.EventHandler(this.iDSanityCheckToolStripMenuItem_Click);
             // 
             // Form1
             // 
@@ -493,6 +521,9 @@
         private System.Windows.Forms.Button button10;
         private System.Windows.Forms.Button button11;
         private System.Windows.Forms.Button button12;
+        private System.Windows.Forms.ToolStripMenuItem toolsToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem createNewVersionForMultiplePlatformsAndDoCrossdiffImportFromIDADiffCalculatorResultsToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem iDSanityCheckToolStripMenuItem;
     }
 }
 
