@@ -4,9 +4,7 @@ import idaapi
 import idautils
 import idc
 import sys
-
-def GetFilePath():
-    return "C:\\Games\\SkyrimMods\\RETools\\Data\\"
+import ida_kernwin
 
 def IsUserName(ea):
     flags = ida_bytes.get_full_flags(ea)
@@ -33,7 +31,8 @@ if __name__ == '__main__':
 
     print("Beginning export\n")
 
-    handle = open(GetFilePath() + "idanames.txt", "w")
+    save_path = ida_kernwin.ask_file(1, "*.txt", "Enter name of export txt file:")
+    handle = open(save_path, "w")
     handle.truncate()
     for key, value in Names():
         if IsUserName(key) != True:
