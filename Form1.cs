@@ -616,9 +616,18 @@ namespace AddressLibraryManager
                 var fi_prev = new System.IO.FileInfo(System.IO.Path.Combine(fi.DirectoryName, "output_unmatched_prev.txt"));
                 var fi_next = new System.IO.FileInfo(System.IO.Path.Combine(fi.DirectoryName, "output_unmatched_next.txt"));
 
+                var fihash_prev = new System.IO.FileInfo(System.IO.Path.Combine(fi.DirectoryName, "output_hash_prev.txt"));
+                var fihash_next = new System.IO.FileInfo(System.IO.Path.Combine(fi.DirectoryName, "output_hash_next.txt"));
+
                 if (!fi_prev.Exists || !fi_next.Exists)
                 {
                     MessageBox.Show("Failed to find output_unmatched_prev.txt or output_unmatched_next.txt! These two files are also needed.", "Error", MessageBoxButtons.OK);
+                    return;
+                }
+
+                if (!fihash_prev.Exists || !fihash_next.Exists)
+                {
+                    MessageBox.Show("Failed to find output_hash_prev.txt or output_hash_next.txt! These two files are also needed.", "Error", MessageBoxButtons.OK);
                     return;
                 }
 
@@ -846,7 +855,97 @@ namespace AddressLibraryManager
                     }
                 }
 
-                if(newID > 0 || modified)
+                using (var sw = new System.IO.StreamReader(fihash_prev.FullName, new UTF8Encoding(false)))
+                {
+                    Dictionary<uint, ulong> revlookup = new Dictionary<uint, ulong>();
+                    if (prev_lib.Values != null)
+                    {
+                        foreach (var pair in prev_lib.Values)
+                            revlookup[pair.Value] = pair.Key;
+                    }
+                    string l;
+                    while ((l = sw.ReadLine()) != null)
+                    {
+                        if (l.Length == 0)
+                            continue;
+
+                        var spl = l.Split(new[] { '\t' }, StringSplitOptions.None);
+                        if (spl.Length != 2)
+                            throw new FormatException("Bad format: " + l);
+
+                        string first = spl[0].Substring(2);
+
+                        long a;
+                        if (!long.TryParse(first, System.Globalization.NumberStyles.AllowHexSpecifier, null, out a))
+                            throw new FormatException("Bad format: " + l);
+
+                        a -= prev_lib.BaseAddress;
+                        if (a < 0 || a > 0x40000000)
+                            throw new FormatException("Invalid address: " + l);
+
+                        string second = spl[1];
+
+                        ulong b;
+                        if (!ulong.TryParse(second, out b))
+                            throw new FormatException("Bad format: " + l);
+
+                        ulong vid;
+                        if(revlookup.TryGetValue((uint)a, out vid))
+                        {
+                            if (prev_lib.Hashes == null)
+                                prev_lib.Hashes = new SortedDictionary<ulong, ulong>();
+                            modified = true;
+                            prev_lib.Hashes[vid] = b;
+                        }
+                    }
+                }
+
+                using (var sw = new System.IO.StreamReader(fihash_next.FullName, new UTF8Encoding(false)))
+                {
+                    Dictionary<uint, ulong> revlookup = new Dictionary<uint, ulong>();
+                    if (next_lib.Values != null)
+                    {
+                        foreach (var pair in next_lib.Values)
+                            revlookup[pair.Value] = pair.Key;
+                    }
+                    string l;
+                    while ((l = sw.ReadLine()) != null)
+                    {
+                        if (l.Length == 0)
+                            continue;
+
+                        var spl = l.Split(new[] { '\t' }, StringSplitOptions.None);
+                        if (spl.Length != 2)
+                            throw new FormatException("Bad format: " + l);
+
+                        string first = spl[0].Substring(2);
+
+                        long a;
+                        if (!long.TryParse(first, System.Globalization.NumberStyles.AllowHexSpecifier, null, out a))
+                            throw new FormatException("Bad format: " + l);
+
+                        a -= next_lib.BaseAddress;
+                        if (a < 0 || a > 0x40000000)
+                            throw new FormatException("Invalid address: " + l);
+
+                        string second = spl[1];
+
+                        ulong b;
+                        if (!ulong.TryParse(second, out b))
+                            throw new FormatException("Bad format: " + l);
+
+                        ulong vid;
+                        if (revlookup.TryGetValue((uint)a, out vid))
+                        {
+                            if (next_lib.Hashes == null)
+                                next_lib.Hashes = new SortedDictionary<ulong, ulong>();
+                            modified = true;
+                            next_lib.Hashes[vid] = b;
+                        }
+                    }
+                }
+
+                if (newID > 0 || modified)
                     this.MarkModified(1);
 
                 MessageBox.Show("Ok. Assigned " + assignedID1 + " ID in previous version, and " + assignedID2 + " in next version. " + newID + " of the IDs were newly created.");
@@ -2104,6 +2203,12 @@ namespace AddressLibraryManager
             {
                 ReportError(ex);
             }
+        }
+
+        private void iDOrOffsetLookupToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            var f = new OffsetLookupForm();
+            f.ShowDialog();
         }
     }
 }

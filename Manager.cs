@@ -128,7 +128,7 @@ namespace AddressLibraryManager
         {
             get
             {
-                return 1;
+                return 2;
             }
         }
 
@@ -391,6 +391,15 @@ namespace AddressLibraryManager
         }
 
         /// <summary>
+        /// Gets or sets the function hashes.
+        /// </summary>
+        public SortedDictionary<ulong, ulong> Hashes
+        {
+            get;
+            set;
+        }
+
+        /// <summary>
         /// Writes to stream.
         /// </summary>
         /// <param name="f">The writer.</param>
@@ -415,6 +424,18 @@ namespace AddressLibraryManager
             {
                 f.Write((int)this.Values.Count);
                 foreach(var pair in this.Values)
+                {
+                    f.Write(pair.Key);
+                    f.Write(pair.Value);
+                }
+            }
+            else
+                f.Write((int)0);
+
+            if (this.Hashes != null && this.Hashes.Count != 0)
+            {
+                f.Write((int)this.Hashes.Count);
+                foreach(var pair in this.Hashes)
                 {
                     f.Write(pair.Key);
                     f.Write(pair.Value);
@@ -455,6 +476,21 @@ namespace AddressLibraryManager
                         ulong k = f.ReadUInt64();
                         uint v = f.ReadUInt32();
                         this.Values.Add(k, v);
+                    }
+                }
+            }
+
+            if(version >= 2)
+            {
+                int c = f.ReadInt32();
+                if(c != 0)
+                {
+                    this.Hashes = new SortedDictionary<ulong, ulong>();
+                    for(int i = 0; i < c; i++)
+                    {
+                        ulong k = f.ReadUInt64();
+                        ulong v = f.ReadUInt64();
+                        this.Hashes.Add(k, v);
                     }
                 }
             }
