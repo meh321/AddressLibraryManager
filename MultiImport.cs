@@ -4,6 +4,7 @@ using System.ComponentModel;
 using System.Data;
 using System.Drawing;
 using System.Linq;
+using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
@@ -315,6 +316,9 @@ namespace AddressLibraryManager
             if (p.cur.Library.Values == null)
                 p.cur.Library.Values = new SortedDictionary<ulong, uint>();
 
+            var revp = new Dictionary<uint, ulong>(p.prev.OffsetToId);
+            var revc = new Dictionary<uint, ulong>(p.cur.OffsetToId);
+
             foreach(var pair in p.diff_data.offsets)
             {
                 ulong id = 0;
@@ -323,6 +327,7 @@ namespace AddressLibraryManager
                 
                 p.stats_assigned_simple++;
                 p.cur.Library.Values[id] = pair.Value;
+                revc[pair.Value] = id;
 
                 if(p.cross_data != null)
                 {
@@ -373,6 +378,32 @@ namespace AddressLibraryManager
                 }
 
                 p.cur.Library.Values[id] = bad;
+                revc[bad] = id;
+            }
+
+            if(p.diff_data != null)
+            {
+                foreach (var pair in p.diff_data.hash)
+                {
+                    ulong id;
+                    if (revp.TryGetValue(pair.Key, out id))
+                    {
+                        if (p.prev.Library.Hashes == null)
+                            p.prev.Library.Hashes = new SortedDictionary<ulong, ulong>();
+                        p.prev.Library.Hashes[id] = pair.Value;
+                    }
+                }
+
+                foreach (var pair in p.diff_data.hash2)
+                {
+                    ulong id;
+                    if (revc.TryGetValue(pair.Key, out id))
+                    {
+                        if (p.cur.Library.Hashes == null)
+                            p.cur.Library.Hashes = new SortedDictionary<ulong, ulong>();
+                        p.cur.Library.Hashes[id] = pair.Value;
+                    }
+                }
             }
 
             return true;
@@ -419,9 +450,18 @@ namespace AddressLibraryManager
             var fi_prev = new System.IO.FileInfo(System.IO.Path.Combine(fi.DirectoryName, "output_unmatched_prev.txt"));
             var fi_next = new System.IO.FileInfo(System.IO.Path.Combine(fi.DirectoryName, "output_unmatched_next.txt"));
 
+            var fihash_prev = new System.IO.FileInfo(System.IO.Path.Combine(fi.DirectoryName, "output_hash_prev.txt"));
+            var fihash_next = new System.IO.FileInfo(System.IO.Path.Combine(fi.DirectoryName, "output_hash_next.txt"));
+
             if (!fi_prev.Exists || !fi_next.Exists)
             {
                 MessageBox.Show("Failed to find output_unmatched_prev.txt or output_unmatched_next.txt! These two files are also needed.", "Error", MessageBoxButtons.OK);
+                return null;
+            }
+
+            if (!fihash_prev.Exists || !fihash_next.Exists)
+            {
+                MessageBox.Show("Failed to find output_hash_prev.txt or output_hash_next.txt! These two files are also needed.", "Error", MessageBoxButtons.OK);
                 return null;
             }
 
@@ -502,6 +542,54 @@ namespace AddressLibraryManager
                 }
             }
 
+            using (var sw = new System.IO.StreamReader(fihash_prev.FullName, new UTF8Encoding(false)))
+            {
+                string l;
+                while ((l = sw.ReadLine()) != null)
+                {
+                    if (l.Length == 0)
+                        continue;
+
+                    var spl = l.Split(new[] { '\t' }, StringSplitOptions.None);
+                    if (spl.Length != 2)
+                        throw new FormatException("Bad format: " + l);
+
+                    uint a = this.ParseOffset(spl[0], lib1);
+                    
+                    string second = spl[1];
+
+                    ulong b;
+                    if (!ulong.TryParse(second, out b))
+                        throw new FormatException("Bad format: " + l);
+
+                    f.hash[a] = b;
+                }
+            }
+
+            using (var sw = new System.IO.StreamReader(fihash_next.FullName, new UTF8Encoding(false)))
+            {
+                string l;
+                while ((l = sw.ReadLine()) != null)
+                {
+                    if (l.Length == 0)
+                        continue;
+
+                    var spl = l.Split(new[] { '\t' }, StringSplitOptions.None);
+                    if (spl.Length != 2)
+                        throw new FormatException("Bad format: " + l);
+
+                    uint a = this.ParseOffset(spl[0], lib2);
+
+                    string second = spl[1];
+
+                    ulong b;
+                    if (!ulong.TryParse(second, out b))
+                        throw new FormatException("Bad format: " + l);
+
+                    f.hash2[a] = b;
+                }
+            }
+
             return f;
         }
 
@@ -511,6 +599,8 @@ namespace AddressLibraryManager
             internal Dictionary<uint, uint> offsets2 = new Dictionary<uint, uint>();
             internal List<uint> prevbad = new List<uint>();
             internal List<uint> curbad = new List<uint>();
+            internal Dictionary<uint, ulong> hash = new Dictionary<uint, ulong>();
+            internal Dictionary<uint, ulong> hash2 = new Dictionary<uint, ulong>();
         }
 
         private sealed class VLib
