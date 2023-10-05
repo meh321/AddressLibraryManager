@@ -5,6 +5,7 @@ using System.Data;
 using System.Drawing;
 using System.IO;
 using System.Linq;
+using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
@@ -1979,6 +1980,129 @@ namespace AddressLibraryManager
             {
                 ReportError(ex);
                 return;
+            }
+        }
+
+        private void checkIfIDsExistsInAllVersionsToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            var db = Manager.CurrentDatabase;
+            if(db == null)
+            {
+                MessageBox.Show("You need to load a database first!");
+                return;
+            }
+
+            if(db.Versions.Count == 0)
+            {
+                MessageBox.Show("Loaded database has no versions to check against!");
+                return;
+            }
+
+            var of = new OpenFileDialog();
+            of.AddExtension = true;
+            of.DefaultExt = "txt";
+            of.CheckFileExists = true;
+            of.Title = "Select the text file containing IDs";
+
+            if (of.ShowDialog() != DialogResult.OK)
+                return;
+
+            var fi = new System.IO.FileInfo(of.FileName);
+            try
+            {
+                int failedParse = 0;
+                int success = 0;
+                List<(ulong, List<Version>)> failedFind = new List<(ulong, List<Version>)>();
+                using(var f = fi.OpenText())
+                {
+                    string l;
+                    while((l = f.ReadLine()) != null)
+                    {
+                        var spl = l.Split(new[] { ',', ' ', '\t', ';' }, StringSplitOptions.RemoveEmptyEntries);
+                        if (spl.Length == 0)
+                            continue;
+
+                        foreach(var x in spl)
+                        {
+                            ulong vid;
+                            if(!ulong.TryParse(x, out vid))
+                            {
+                                failedParse++;
+                                continue;
+                            }
+
+                            List<Version> fail = null;
+                            foreach(var pair in db.Versions)
+                            {
+                                if (pair.Value == null)
+                                    continue;
+
+                                if(pair.Value.Values == null || !pair.Value.Values.ContainsKey(vid))
+                                {
+                                    if (fail == null)
+                                        fail = new List<Version>();
+                                    fail.Add(pair.Key);
+                                }
+                            }
+
+                            if (fail == null)
+                                success++;
+                            else
+                                failedFind.Add((vid, fail));
+                        }
+                    }
+                }
+
+                var bld = new StringBuilder();
+                bld.AppendLine("Checked all IDs from file.");
+                bld.AppendLine();
+                bld.AppendLine("Success: " + success);
+                if(failedParse > 0)
+                    bld.AppendLine("Failed to parse (invalid file format): " + failedParse);
+                bld.AppendLine("Failed: " + failedFind.Count);
+                if(failedFind.Count != 0)
+                {
+                    bld.AppendLine();
+                    if (failedFind.Count > 20)
+                        bld.AppendLine("Showing first 20 fails:");
+                    for(int i = 0; i < 20 && i < failedFind.Count; i++)
+                    {
+                        var p = failedFind[i];
+                        bld.Append(p.Item1.ToString());
+                        bld.Append(" | ");
+                        bld.Append(string.Join("; ", p.Item2));
+                        bld.AppendLine();
+                    }
+                }
+
+                if (failedParse > 0)
+                {
+                    bld.AppendLine();
+                    bld.AppendLine("Do you want to write all fails out to 'report.txt'?");
+
+                    if (MessageBox.Show(bld.ToString(), "Done", MessageBoxButtons.YesNoCancel) == DialogResult.Yes)
+                    {
+                        using(var f = new System.IO.StreamWriter("report.txt", false))
+                        {
+                            for (int i = 0; i < failedFind.Count; i++)
+                            {
+                                var p = failedFind[i];
+                                f.Write(p.Item1.ToString());
+                                f.Write(" | ");
+                                f.Write(string.Join("; ", p.Item2));
+                                f.WriteLine();
+                            }
+                        }
+
+                        MessageBox.Show("Done! 'report.txt' file created or rewritten in app directory.");
+                    }
+                }
+                else
+                    MessageBox.Show(bld.ToString(), "Done");
+            }
+            catch(Exception ex)
+            {
+                ReportError(ex);
             }
         }
     }

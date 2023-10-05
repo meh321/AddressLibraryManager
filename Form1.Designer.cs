@@ -37,6 +37,7 @@
             this.exitToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.toolsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.createNewVersionForMultiplePlatformsAndDoCrossdiffImportFromIDADiffCalculatorResultsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.iDSanityCheckToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.splitContainer1 = new System.Windows.Forms.SplitContainer();
             this.listBox1 = new System.Windows.Forms.ListBox();
             this.panel1 = new System.Windows.Forms.Panel();
@@ -65,7 +66,7 @@
             this.label2 = new System.Windows.Forms.Label();
             this.textBox1 = new System.Windows.Forms.TextBox();
             this.label1 = new System.Windows.Forms.Label();
-            this.iDSanityCheckToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.checkIfIDsExistsInAllVersionsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.menuStrip1.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.splitContainer1)).BeginInit();
             this.splitContainer1.Panel1.SuspendLayout();
@@ -139,7 +140,8 @@
             // 
             this.toolsToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.createNewVersionForMultiplePlatformsAndDoCrossdiffImportFromIDADiffCalculatorResultsToolStripMenuItem,
-            this.iDSanityCheckToolStripMenuItem});
+            this.iDSanityCheckToolStripMenuItem,
+            this.checkIfIDsExistsInAllVersionsToolStripMenuItem});
             this.toolsToolStripMenuItem.Name = "toolsToolStripMenuItem";
             this.toolsToolStripMenuItem.Size = new System.Drawing.Size(46, 20);
             this.toolsToolStripMenuItem.Text = "Tools";
@@ -151,6 +153,13 @@
             this.createNewVersionForMultiplePlatformsAndDoCrossdiffImportFromIDADiffCalculatorResultsToolStripMenuItem.Size = new System.Drawing.Size(420, 22);
             this.createNewVersionForMultiplePlatformsAndDoCrossdiffImportFromIDADiffCalculatorResultsToolStripMenuItem.Text = "Multiple platform cross-diff import from IDADiffCalculator results";
             this.createNewVersionForMultiplePlatformsAndDoCrossdiffImportFromIDADiffCalculatorResultsToolStripMenuItem.Click += new System.EventHandler(this.createNewVersionForMultiplePlatformsAndDoCrossdiffImportFromIDADiffCalculatorResultsToolStripMenuItem_Click);
+            // 
+            // iDSanityCheckToolStripMenuItem
+            // 
+            this.iDSanityCheckToolStripMenuItem.Name = "iDSanityCheckToolStripMenuItem";
+            this.iDSanityCheckToolStripMenuItem.Size = new System.Drawing.Size(420, 22);
+            this.iDSanityCheckToolStripMenuItem.Text = "ID sanity check";
+            this.iDSanityCheckToolStripMenuItem.Click += new System.EventHandler(this.iDSanityCheckToolStripMenuItem_Click);
             // 
             // splitContainer1
             // 
@@ -448,12 +457,12 @@
             this.label1.TabIndex = 0;
             this.label1.Text = "High ID:";
             // 
-            // iDSanityCheckToolStripMenuItem
+            // checkIfIDsExistsInAllVersionsToolStripMenuItem
             // 
-            this.iDSanityCheckToolStripMenuItem.Name = "iDSanityCheckToolStripMenuItem";
-            this.iDSanityCheckToolStripMenuItem.Size = new System.Drawing.Size(420, 22);
-            this.iDSanityCheckToolStripMenuItem.Text = "ID sanity check";
-            this.iDSanityCheckToolStripMenuItem.Click += new System.EventHandler(this.iDSanityCheckToolStripMenuItem_Click);
+            this.checkIfIDsExistsInAllVersionsToolStripMenuItem.Name = "checkIfIDsExistsInAllVersionsToolStripMenuItem";
+            this.checkIfIDsExistsInAllVersionsToolStripMenuItem.Size = new System.Drawing.Size(420, 22);
+            this.checkIfIDsExistsInAllVersionsToolStripMenuItem.Text = "Check if IDs exists in all versions";
+            this.checkIfIDsExistsInAllVersionsToolStripMenuItem.Click += new System.EventHandler(this.checkIfIDsExistsInAllVersionsToolStripMenuItem_Click);
             // 
             // Form1
             // 
@@ -524,6 +533,7 @@
         private System.Windows.Forms.ToolStripMenuItem toolsToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem createNewVersionForMultiplePlatformsAndDoCrossdiffImportFromIDADiffCalculatorResultsToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem iDSanityCheckToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem checkIfIDsExistsInAllVersionsToolStripMenuItem;
     }
 }
 
